@@ -15,7 +15,7 @@ import os
 
 
 from util.metrics import runningScore
-from model.model import SharedEncoder_var, PrivateEncoder, PrivateDecoder, Discriminator, DomainClassifier
+from model.model import SharedEncoder, PrivateEncoder, PrivateDecoder, Discriminator, DomainClassifier
 from util.utils import poly_lr_scheduler, adjust_learning_rate, save_models, load_models
 
 from util.loader.CityTestLoader import CityTestLoader
@@ -41,28 +41,27 @@ import yaml
 torch.backends.cudnn.benchmark = True
 
 IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
-'''
-DATA_DIRECTORY = './data/Cityscapes/data'    # clean cityscapes images
-DATA_LIST_PATH = './dataset/cityscapes_list/train_syn.txt'  # 498 images from cityscapes
-SAVE_PATH = './data/Cityscapes/data/pseudo/train'
-'''
-'''
-DATA_DIRECTORY = './data/Cityscapes/syn_fog_data'  # rename train_XXX folder to train
-DATA_LIST_PATH = './dataset/cityscapes_list/train_syn.txt'  # 498 images from cityscapes
-SAVE_PATH = './data/Cityscapes/syn_fog_data/pseudo/train_0.03'
 
-'''
+# DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data/'  # clean cityscapes images
+# DATA_LIST_PATH = './util/loader/cityscapes_list/train_syn.txt'  # 498 images from cityscapes
+
+# SAVE_PATH = './generated_imgs/variance_pred_imgs/city_clean_38'
+
+
+
 DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # rename folder to train
-DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
-# DATA_LIST_PATH = './dataset/cityscapes_list/train_fz_fog_35.txt'   # 35 foggy images from foggyzurich
-# DATA_LIST_PATH = './util/loader/cityscapes_list/city_fz_40.txt'   # 40 test images from foggyzurich
-SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean/'
+# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
+# DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'   # 40 test images from foggyzurich
+DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_medium+test.txt'
+# SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean_36'
+SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_fog_38'
 
+WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1weight_best'  # model path IoU 38
+# WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best'  # model path IoU 36
 
-WEIGHT_DIR = './results/city2fz_clean_new/weight_best'   # model path
-
-# SET = 'fz_test_40'
-SET = 'fz_clean'
+SET = 'fz_medium'    # for zurich fog
+# SET = 'fz_clean'      # for zurich clean
+# SET = 'train'         # for city clean
 
 IGNORE_LABEL = 255
 NUM_CLASSES = 19
@@ -140,7 +139,7 @@ def main():
     private_code_size = 8
     shared_code_channels = 2048
 
-    enc_shared = SharedEncoder_var().cuda(gpu0)
+    enc_shared = SharedEncoder().cuda(gpu0)
 
     model_dict['enc_shared'] = enc_shared
 
@@ -191,19 +190,19 @@ def main():
         print('\r>>>>Extracting feature...%04d/%04d' % (index * batchsize, NUM_STEPS), end='')
         if args.model == 'DeepLab':
             with torch.no_grad():
-                output1, output2 = enc_shared(inputs)
+                _, output1, output2,_ = enc_shared(inputs)
                 output_batch = interp(sm(0.5 * output1 + output2))
 
                 heatmap_batch = torch.sum(kl_distance(log_sm(output1), sm(output2)), dim=1)  # variance_map batch
 
-                output1, output2 = enc_shared(fliplr(inputs))
+                _, output1, output2, _ = enc_shared(fliplr(inputs))
                 output1, output2 = fliplr(output1), fliplr(output2)
                 output_batch += interp(sm(0.5 * output1 + output2))
                 del output1, output2, inputs
 
-                output1, output2 = enc_shared(inputs2)
+                _, output1, output2, _ = enc_shared(inputs2)
                 output_batch += interp(sm(0.5 * output1 + output2))
-                output1, output2 = enc_shared(fliplr(inputs2))
+                _, output1, output2, _ = enc_shared(fliplr(inputs2))
                 output1, output2 = fliplr(output1), fliplr(output2)
                 output_batch += interp(sm(0.5 * output1 + output2))
                 del output1, output2, inputs2
@@ -241,7 +240,7 @@ def main():
             print('%s/%s' % (save_path, name_tmp))
             output_col.save('%s/%s_color.png' % (save_path, name_tmp.split('.png')[0]))
 
-            heatmap_tmp = heatmap_batch[i, :, :] / np.max(heatmap_batch[i, :, :])
+            heatmap_tmp = heatmap_batch[i, :, :] / np.max(heatmap_batch[i, :, :])   # max normalization
             fig = plt.figure()
             plt.axis('off')
             heatmap = plt.imshow(heatmap_tmp, cmap='viridis')
@@ -255,84 +254,5 @@ if __name__ == '__main__':
     with torch.no_grad():
         save_path = main()
     os.system('python compute_iou.py ./data/Cityscapes/real_fog_data/gtFine/fz_test_40 %s' % save_path)
-
-num_classes = 19
-CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'
-DATA_LIST_PATH_TEST_IMG = './util/loader/cityscapes_list/city_fz_clean.txt'
-
-CITY_FOG_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'
-DATA_LIST_PATH_CITY_FOG_IMG = './util/loader/cityscapes_list/train_fz_medium.txt'
-
-
-
-DEFAULT_GPU = 1
-IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
-
-parser = argparse.ArgumentParser(description='Domain Invariant Structure Extraction (DISE) \
-	for unsupervised domain adaptation for semantic segmentation')
-
-parser.add_argument('--city_data_path', type=str, default=CITY_DATA_PATH, help='the path to cityscapes.')
-parser.add_argument('--target_data_path', type=str, default=CITY_FOG_DATA_PATH, help='the path to Zurich dataset.')
-parser.add_argument('--data_list_path_test_img', type=str, default=DATA_LIST_PATH_TEST_IMG)
-parser.add_argument('--data_list_path_gta5', type=str, default=DATA_LIST_PATH_CITY_FOG_IMG)
-parser.add_argument('--gpu', type=str, default=DEFAULT_GPU)
-parser.add_argument('--output_dir', type=str, default=OUTPUT_DIR)
-
-args = parser.parse_args()
-
-test_set = CityTestLoader(args.city_data_path, args.data_list_path_test_img, max_iters=None, crop_size=[512, 1024],
-                          mean=IMG_MEAN, set='city_fz_clean')
-test_loader = torch_data.DataLoader(test_set, batch_size=1, shuffle=False, num_workers=2, pin_memory=False)
-
-target_set = ZurichLoader(args.target_data_path, args.data_list_path_gta5, max_iters=None,
-                          crop_size=[540, 960], mean=IMG_MEAN, set='fz_medium')
-target_loader = torch_data.DataLoader(target_set, batch_size=1, shuffle=True, num_workers=2, pin_memory=False)
-
-sourceloader_iter = enumerate(test_loader)
-targetloader_iter = enumerate(target_loader)
-
-upsample_1024 = nn.Upsample(size=[1024, 2048], mode='bilinear')
-
-
-#enc_t.eval()
-#dec_t.eval()
-
-cty_running_metrics = runningScore(num_classes)
-num_steps = test_set.__len__()
-# for i_test, (images_test, name, target_data) in tqdm(enumerate(test_loader)):
-for i_iter in range(num_steps):
-
-    idx_s, source_batch = next(sourceloader_iter)
-    idx_t, target_batch = next(targetloader_iter)
-
-    images_test, name = source_batch
-    target_data, target_label = target_batch
-
-    sdatav = Variable(images_test.cuda(), volatile=True)
-    tdatav = Variable(target_data.cuda(), volatile=True)
-
-    # forwarding
-    _, _, _, code_s_common = enc_shared(sdatav)
-    low_t, _, _, _ = enc_shared(tdatav)
-
-    code_t_private = enc_t(low_t)
-    # transfered image
-    rec_s2t = dec_t(code_s_common, code_t_private, 1)
-    rec_s2t = upsample_1024(rec_s2t)
-    rec_s2t = rec_s2t.detach()
-    rec_s2t = rec_s2t.cpu().numpy()
-    image_s2t = (rec_s2t[:, [2, 1, 0], :, :] + 1) / 2
-    imgs_s = np.clip(image_s2t * 255, 0, 255).astype(np.uint8)
-    imgs_s = imgs_s.squeeze()
-    imgs_s = imgs_s.transpose(1, 2, 0)
-    imgs_s = Image.fromarray(imgs_s)
-
-    name = name[0][0].split('/')[-1]
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-    imgs_s.save(os.path.join(args.output_dir, name))
-
-    del sdatav, tdatav, code_s_common, code_t_private, rec_s2t
-    torch.cuda.empty_cache()
 
 

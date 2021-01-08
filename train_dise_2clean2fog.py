@@ -35,7 +35,7 @@ GEN_IMG_DIR = './generated_imgs/2clean2fz_medium_new_var/s2t1/'
 save_model_path = './results/2clean2fz_medium_new_var/s2t1/'
 
 #load_model_path = './results/2clean2fz_medium_new/weight_best'
-load_model_path = './results/city2fz_clean_new_var/s2t1weight_best'
+load_model_path = './results/2clean2fz_medium_new_var/s2t1weight_best'
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'      # source image path
 
@@ -610,8 +610,8 @@ for i_iter in range(num_steps):
                 _, aug_pred, pred, _ = enc_shared(images_val)
                 #pred = upsample_512(pred)
                 pred = 0.5 * aug_pred + pred
-                pred = upsample_540(pred)
-                pred = pred.data.max(1)[1].cpu().numpy()
+                pred = upsample_540(pred)    # resize to 540*960
+                pred = pred.data.max(1)[1].cpu().numpy()  # argmax likewise
                 gt = labels_val.data.cpu().numpy()
                 cty_running_metrics.update(gt, pred)
 

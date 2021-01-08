@@ -69,7 +69,7 @@ class cityscapesDataSet(data.Dataset):
         size = image.shape
         image = image[:, :, ::-1]  # change to BGR
         image -= self.mean
-        image = image.transpose((2, 0, 1))
+        image = image.transpose((2, 0, 1)) / 128.0
         # x1 = random.randint(0, image.shape[1] - self.h)
         # y1 = random.randint(0, image.shape[2] - self.w)
         # image = image[:, x1:x1+self.h, y1:y1+self.w]
@@ -80,20 +80,20 @@ class cityscapesDataSet(data.Dataset):
 
 
 if __name__ == '__main__':
-    dst = cityscapesDataSet('../data/Cityscapes/data', './cityscapes_list/val.txt', mean=(0,0,0), set = 'val')
+    dst = cityscapesDataSet('/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data', './cityscapes_list/fz_test.txt', mean=(0,0,0), set = 'fz_test_40')
     trainloader = data.DataLoader(dst, batch_size=1)
     for i, data in enumerate(trainloader):
-        imgs, labels, _, _ = data
-        if i == 0:
+        imgs, _, _ = data
+        if i == 1:
             img = torchvision.utils.make_grid(imgs).numpy()
             img = np.transpose(img, (1, 2, 0))
             img = img[:, :, ::-1]
-            labels = torchvision.utils.make_grid(labels).numpy()
-            labels = np.transpose(labels, (1, 2, 0))
-            labels = labels[:, :, ::-1]
+            # labels = torchvision.utils.make_grid(labels).numpy()
+            # labels = np.transpose(labels, (1, 2, 0))
+            # labels = labels[:, :, ::-1]
             #plt.imshow(img)
             #plt.imshow(labels)
             #plt.show()
             img = Image.fromarray(np.uint8(img) )
-            img.save('Cityscape_Demo.jpg')
-        break
+            img.save('./Cityscape_Demo.jpg')
+
