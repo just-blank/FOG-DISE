@@ -29,10 +29,11 @@ from model.model import SharedEncoder, PrivateEncoder, PrivateDecoder, Discrimin
 from util.utils import poly_lr_scheduler, adjust_learning_rate, save_models, load_models,convert_state_dict
 
 # Data-related
-LOG_DIR = './log/city2fz_clean_new_var/'
-GEN_IMG_DIR = './generated_imgs/city2fz_clean_new_var/'
-save_model_path = './results/city2fz_clean_new_var/'
-load_model_path = './results/city2fz_clean_new_var/weight_best'
+LOG_DIR = './log/city2fz_clean_new_var/kl_loss/'
+GEN_IMG_DIR = './generated_imgs/city2fz_clean_new_var/kl_loss/'
+save_model_path = './results/city2fz_clean_new_var/kl_loss/'
+
+load_model_path = './results/city2fz_clean_new_var/kl_lossweight_best'
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'
 
@@ -56,7 +57,7 @@ DATA_LIST_PATH_VAL_IMG = './util/loader/cityscapes_list/fz_test.txt'
 DATA_LIST_PATH_VAL_LBL = './util/loader/cityscapes_list/fz_test_label.txt'
 
 # Hyper-parameters
-CUDA_DIVICE_ID = '1'    # cuda
+CUDA_DIVICE_ID = '0'    # cuda
 
 parser = argparse.ArgumentParser(description='Domain Invariant Structure Extraction (DISE) \
 	for unsupervised domain adaptation for semantic segmentation')
@@ -102,8 +103,8 @@ num_steps = 60000
 #num_calmIoU = 15 # for debug
 num_calmIoU = 100
 
-learning_rate_seg = 2.5e-4
-#learning_rate_seg = 2.5e-5  # for finetune
+# learning_rate_seg = 2.5e-4
+learning_rate_seg = 2.5e-5  # for finetune
 learning_rate_d = 1e-4
 learning_rate_rec = 1e-3
 learning_rate_dis = 1e-4
@@ -159,12 +160,12 @@ print('building models ...')
 enc_shared = SharedEncoder().cuda()
 # freeze 5 layers
 
-ct = 0
-for child in enc_shared.children():
-    ct += 1
-    if ct < 6:
-        for param in child.parameters():
-            param.requires_grad = False
+# ct = 0
+# for child in enc_shared.children():
+#     ct += 1
+#     if ct < 6:
+#         for param in child.parameters():
+#             param.requires_grad = False
 
 dclf1 = DomainClassifier().cuda()
 dclf2 = DomainClassifier().cuda()
@@ -259,6 +260,7 @@ prob_dclf2_fake1_tmp = []
 prob_dclf2_fake2_tmp = []
 
 loss_sim_sg_tmp = []
+loss_sim_kl_tmp = []
 
 prob_dis_s2t_real1_tmp = []
 prob_dis_s2t_fake1_tmp = []
@@ -282,8 +284,12 @@ dis_t2s.train()
 best_iou = 0
 best_iter = 0
 
+sm = torch.nn.Softmax(dim=1)
+log_sm = torch.nn.LogSoftmax(dim=1)
+kl_loss = nn.KLDivLoss(size_average=False)
+
 for i_iter in range(num_steps):
-    print(i_iter)
+    #print(i_iter)
     sys.stdout.flush()
 
     enc_shared.train()
@@ -422,6 +428,10 @@ for i_iter in range(num_steps):
 
     loss_sim_sg = lambda_seg * loss_s_sg1 + loss_s_sg2
 
+    #mean_pred = t_pred1 * 0.5 + t_pred2
+    n, c, h, w = t_pred1.shape
+    loss_kl = (kl_loss(log_sm(t_pred1) , sm(t_pred2) ) ) / (n*h*w) + (kl_loss(log_sm(t_pred2) , sm(t_pred2)) ) / (n*h*w)
+    #print(loss_kl)
     # ==== tranalated segmentation====
     # When to start using translated labels, it should be discussed
     if i_iter >= 0:
@@ -461,7 +471,12 @@ for i_iter in range(num_steps):
         + 1.0 * loss_feat_similarity \
         + 0.5 * loss_rec_self \
         + 0.01 * loss_image_translation \
-        + 0.05 * loss_rec_tran
+        + 0.05 * loss_rec_tran\
+        + 1.0 * loss_kl
+
+    print(
+        '\033[1m iter = %8d/%8d \033[0m total loss = %.3f loss_seg = %.3f loss_kl = %.3f ' % (
+        i_iter, num_steps, total_loss, loss_sim_sg, loss_kl))
 
     enc_shared_opt.zero_grad()
     enc_s_opt.zero_grad()
@@ -554,6 +569,14 @@ for i_iter in range(num_steps):
         plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, borderaxespad=0.)
         plt.grid()
         plt.savefig(os.path.join(args.log_dir, 'segmentation_loss.png'))
+        plt.close()
+
+        plt.title('varianve_loss')
+        loss_sim_kl_tmp.append(loss_kl.item())
+        plt.plot(i_iter_tmp, loss_sim_kl_tmp, label='loss_kl_sg')
+        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, borderaxespad=0.)
+        plt.grid()
+        plt.savefig(os.path.join(args.log_dir, 'variance_loss.png'))
         plt.close()
 
         plt.title('mIoU')

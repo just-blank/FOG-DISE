@@ -33,6 +33,7 @@ class SharedEncoder(nn.Module):
         
         self.final1 = Seg_Model.layer5
         self.final22 = Seg_Model.layer6
+        # self.final2 = Seg_Model.layer6
 
     def forward(self, x):
         inp_shape = x.shape[2:]
@@ -72,6 +73,7 @@ class SharedEncoder(nn.Module):
         b = []
         b.append(self.final1.parameters())
         b.append(self.final22.parameters())
+        # b.append(self.final22.parameters())
 
         for j in range(len(b)):
             for i in b[j]:

@@ -47,20 +47,22 @@ IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32
 # SAVE_PATH = './generated_imgs/variance_pred_imgs/city_clean_36'
 
 DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # rename folder to train
-# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
-DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'   # 40 test images from foggyzurich
+DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
+# DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'   # 40 test images from foggyzurich
 # DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_medium+test.txt'
 # SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean_40'
-SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_fog_42'
+SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_fog_40'
+var_name = './log/var_mean/kl_t1'
 
-WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1/weight_best'  # model path IoU 42.27
+# WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1/weight_best'  # model path IoU 42
 # WEIGHT_DIR = './results/city2fz_clean_new/weight_best'
 # WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best' # model path IoU 39.16
+WEIGHT_DIR = './results/city2fz_clean_new_var/kl_lossweight_best' # model path IoU 39.16
 # WEIGHT_DIR = './results/fz_clean/weight_best'  # model path IoU 36
 # WEIGHT_DIR = './results/city2zurich_fog_var/weight_best'  # model path IoU 40.08
 
-SET = 'fz_medium'    # for zurich fog
-# SET = 'fz_clean'      # for zurich clean
+# SET = 'fz_medium'    # for zurich fog
+SET = 'fz_clean'      # for zurich clean
 # SET = 'train'         # for city clean
 
 IGNORE_LABEL = 255
@@ -214,8 +216,10 @@ def main():
         elif args.model == 'DeeplabVGG' or args.model == 'Oracle':
             output_batch = enc_shared(Variable(image).cuda())
             output_batch = interp(output_batch).cpu().data.numpy()
-
-
+    np.save(var_name,heatmap_score)
+    mean_score = np.mean(heatmap_score)
+    print(mean_score)
+    '''
         # output_batch = output_batch.transpose(0,2,3,1)
         # output_batch = np.asarray(np.argmax(output_batch, axis=3), dtype=np.uint8)
         output_batch = output_batch.transpose(0, 2, 3, 1)
@@ -248,7 +252,7 @@ def main():
             heatmap = plt.imshow(heatmap_tmp, cmap='viridis')
             # fig.colorbar(heatmap)
             fig.savefig('%s/%s_var_map.png' % (save_path, name_tmp.split('.png')[0]))
-
+    '''
     return args.save
 
 

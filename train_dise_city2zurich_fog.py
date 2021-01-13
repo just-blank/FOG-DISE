@@ -29,9 +29,13 @@ from model.model import SharedEncoder, PrivateEncoder, PrivateDecoder, Discrimin
 from util.utils import poly_lr_scheduler, adjust_learning_rate, save_models, load_models,convert_state_dict
 
 # Data-related
-LOG_DIR = './log/city2zurich_fog/'
-GEN_IMG_DIR = './generated_imgs/city2zurich_fog/'
-save_model_path = './results/city2zurich_fog/'
+LOG_DIR = './log/city2zurich_fog_var/s2t2/'
+GEN_IMG_DIR = './generated_imgs/city2zurich_fog_var/s2t2/'
+save_model_path = './results/city2zurich_fog_var/s2t2/'
+
+# load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
+load_model_path = './results/city2zurich_fog_var/s2t2weight_best'
+
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'               # source data path
 
@@ -53,7 +57,7 @@ CUDA_DIVICE_ID = '1'
 
 parser = argparse.ArgumentParser(description='Domain Invariant Structure Extraction (DISE) \
 	for unsupervised domain adaptation for semantic segmentation')
-parser.add_argument('--dump_logs', type=bool, default=False)
+parser.add_argument('--dump_logs', type=bool, default=True)
 parser.add_argument('--log_dir', type=str, default=LOG_DIR, help='the path to where you save plots and logs.')
 parser.add_argument('--gen_img_dir', type=str, default=GEN_IMG_DIR,
                     help='the path to where you save translated images and segmentation maps.')
@@ -91,7 +95,7 @@ target_input_size = [540, 960]
 batch_size = 1
 
 max_epoch = 150
-num_steps = 75000
+num_steps = 45000
 #num_calmIoU = 15 # for debug
 num_calmIoU = 100
 
@@ -196,11 +200,11 @@ dis_opt_list.append(dis_t2s_opt)
 
 # load_models(model_dict, './results/fz_clean/weight_22500')
 #enc_shared.load_state_dict(torch.load('./weight_gta2city/enc_shared.pth'))
-load_models(model_dict, './weight_gta2city')   # model_dict is a dict of all network structure
+load_models(model_dict, load_model_path)   # model_dict is a dict of all network structure
 
 # reload params of enc_shared
-enc_shared.load_state_dict(torch.load('./results/2clean2fz_medium_new/weight_best/enc_shared.pth'))
-model_dict['enc_shared'] = enc_shared
+# enc_shared.load_state_dict(torch.load('./results/2clean2fz_medium_new_var/s2t1weight_best/enc_shared.pth'))
+# model_dict['enc_shared'] = enc_shared
 
 
 cudnn.enabled = True
@@ -572,8 +576,9 @@ for i_iter in range(num_steps):
                 images_val = Variable(images_val.cuda())
                 labels_val = Variable(labels_val)
 
-                _, _, pred, _ = enc_shared(images_val)
+                _, aug_pred , pred, _ = enc_shared(images_val)
                 #pred = upsample_512(pred)
+                pred = 0.5 * aug_pred + pred
                 pred = upsample_540(pred)
                 pred = pred.data.max(1)[1].cpu().numpy()
                 gt = labels_val.data.cpu().numpy()
@@ -587,7 +592,7 @@ for i_iter in range(num_steps):
         cty_running_metrics.reset()
         City_tmp.append(cty_score['Mean IoU : \t'])
         epoch_tmp.append(i_iter)
-        if i_iter % 1000 == 0 and i_iter != 0:
+        if i_iter % 5000 == 0 and i_iter != 0:
             save_models(model_dict, save_model_path + 'weight_' + str(i_iter))
 
         if cty_score['Mean IoU : \t'] > best_iou:

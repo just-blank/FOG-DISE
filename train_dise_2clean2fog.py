@@ -35,7 +35,8 @@ GEN_IMG_DIR = './generated_imgs/2clean2fz_medium_new_var/s2t1/'
 save_model_path = './results/2clean2fz_medium_new_var/s2t1/'
 
 #load_model_path = './results/2clean2fz_medium_new/weight_best'
-load_model_path = './results/2clean2fz_medium_new_var/s2t1weight_best'
+load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
+# load_model_path = './results/city2fz_clean_new_var/weight_best'
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'      # source image path
 
@@ -67,7 +68,7 @@ CUDA_DIVICE_ID = '1'
 
 parser = argparse.ArgumentParser(description='Domain Invariant Structure Extraction (DISE) \
 	for unsupervised domain adaptation for semantic segmentation')
-parser.add_argument('--dump_logs', type=bool, default=False)
+parser.add_argument('--dump_logs', type=bool, default=True)
 parser.add_argument('--log_dir', type=str, default=LOG_DIR, help='the path to where you save plots and logs.')
 parser.add_argument('--gen_img_dir', type=str, default=GEN_IMG_DIR,
                     help='the path to where you save translated images and segmentation maps.')

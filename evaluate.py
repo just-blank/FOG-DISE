@@ -29,7 +29,7 @@ num_classes = 19
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'
 DATA_LIST_PATH_TEST_IMG = './util/loader/cityscapes_list/train_fz_clean.txt'
 
-WEIGHT_DIR = './results/fz_clean/weight_57000'
+WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best' # model path IoU 39.16
 OUTPUT_DIR = './generated_imgs/city2fz_clean/fz_clean_pred/'
 
 DEFAULT_GPU = 0
@@ -64,7 +64,8 @@ with torch.no_grad():
     for i_test, (images_test, name) in tqdm(enumerate(test_loader)):
         images_test = Variable(images_test.cuda())
 
-        _, _, pred, _ = enc_shared(images_test)
+        _, aux, pred, _ = enc_shared(images_test)
+        pred = aux*0.5 + pred
         #pred = upsample_1024(pred)   # for cityscapes
         pred = upsample_1080(pred)    # for zurich
 
