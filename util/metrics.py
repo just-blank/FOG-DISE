@@ -52,9 +52,10 @@ class runningScore(object):
         acc_cls = np.diag(hist) / hist.sum(axis=1)
         acc_cls = np.nanmean(acc_cls)
         iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
+        iu = np.nan_to_num(iu)  # convert nan to zero
         for id in range(19):
             print ('===>' + label[id] + ':' + str(iu[id]))
-        mean_iu = np.nanmean(iu)
+        mean_iu = np.nanmean(iu)*19/18  # skip train label
         freq = hist.sum(axis=1) / hist.sum()
         fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
         cls_iu = dict(zip(range(self.n_classes), iu))

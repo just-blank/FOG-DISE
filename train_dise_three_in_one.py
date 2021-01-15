@@ -29,49 +29,50 @@ from model.model import SharedEncoder, PrivateEncoder, PrivateDecoder, Discrimin
 from util.utils import poly_lr_scheduler, adjust_learning_rate, save_models, load_models,convert_state_dict
 
 # Data-related
-LOG_DIR = './log/city2fz_clean_new_var/kl_loss_s/'
-GEN_IMG_DIR = './generated_imgs/city2fz_clean_new_var/kl_loss_s/'
-save_model_path = './results/city2fz_clean_new_var/kl_loss_s/'
+LOG_DIR = './log/three_in_one_var/'
+GEN_IMG_DIR = './generated_imgs/three_in_one_var/'
+save_model_path = './results/three_in_one_var/'
 
-# load_model_path = './results/city2fz_clean_new_var/kl_lossweight_best'
-load_model_path = './results/city2fz_clean_new_var/weight_best'
+load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
+# load_model_path = './results/city2zurich_fog_var/s2t2/weight_10000'
 
-CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'
+
+CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'               # source data path
 
 CITY_FOG_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # target image path
 
-DATA_LIST_PATH_CITY_IMG = './util/loader/cityscapes_list/train_syn.txt'         # 498 city clean imgs
+DATA_LIST_PATH_CITY_IMG = './util/loader/cityscapes_list/train_syn.txt'         # 498 city clean
 DATA_LIST_PATH_CITY_LBL = './util/loader/cityscapes_list/train_syn_label.txt'
-'''  
-# for foggy cityscapes 498
-DATA_LIST_PATH_CITY_FOG_IMG = './util/loader/cityscapes_list/train_syn.txt'
-DATA_LIST_PATH_CITY_FOG_LBL = './util/loader/cityscapes_list/train_syn_label.txt'
 
-DATA_LIST_PATH_VAL_IMG  = './util/loader/cityscapes_list/val_fog_0.03.txt'
-DATA_LIST_PATH_VAL_LBL  = './util/loader/cityscapes_list/val_fog_0.03_label.txt'
-'''
+DATA_LIST_PATH_ZURICH_FOG_IMG = './util/loader/cityscapes_list/train_fz_medium+test.txt'      # 1498+40 zurich fog
+DATA_LIST_PATH_ZURICH_CLEAN_IMG = './util/loader/cityscapes_list/train_fz_clean.txt'            # 248 zurich clean
 
-#DATA_LIST_PATH_CITY_FOG_IMG = './util/loader/cityscapes_list/train_fz_medium.txt'
-DATA_LIST_PATH_CITY_FOG_IMG = './util/loader/cityscapes_list/train_fz_clean.txt'    # 248 zurich clean imgs
-
-DATA_LIST_PATH_VAL_IMG = './util/loader/cityscapes_list/fz_test.txt'
+# for validate
+DATA_LIST_PATH_VAL_IMG = './util/loader/cityscapes_list/fz_test.txt'            # 40 test zurich images
 DATA_LIST_PATH_VAL_LBL = './util/loader/cityscapes_list/fz_test_label.txt'
 
 # Hyper-parameters
-CUDA_DIVICE_ID = '0'    # cuda
+CUDA_DIVICE_ID = '1'
 
 parser = argparse.ArgumentParser(description='Domain Invariant Structure Extraction (DISE) \
 	for unsupervised domain adaptation for semantic segmentation')
-parser.add_argument('--dump_logs', type=bool, default=False)
+parser.add_argument('--dump_logs', type=bool, default=True)
 parser.add_argument('--log_dir', type=str, default=LOG_DIR, help='the path to where you save plots and logs.')
 parser.add_argument('--gen_img_dir', type=str, default=GEN_IMG_DIR,
                     help='the path to where you save translated images and segmentation maps.')
-parser.add_argument('--target_data_path', type=str, default=CITY_FOG_DATA_PATH, help='the path to GTA5 dataset.')
+
+parser.add_argument('--target_data_path', type=str, default=CITY_FOG_DATA_PATH, help='the path to zurich dataset.')
 parser.add_argument('--city_data_path', type=str, default=CITY_DATA_PATH, help='the path to Cityscapes dataset.')
-parser.add_argument('--data_list_path_gta5', type=str, default=DATA_LIST_PATH_CITY_FOG_IMG)
-# parser.add_argument('--data_list_path_city_fog_lbl', type=str, default=DATA_LIST_PATH_CITY_FOG_LBL)
+
+parser.add_argument('--data_list_path_zurich_fog', type=str, default=DATA_LIST_PATH_ZURICH_FOG_IMG)
+parser.add_argument('--data_list_path_zurich_fog_lbl', type=str, default=DATA_LIST_PATH_ZURICH_FOG_LBL)
+
+parser.add_argument('--data_list_path_zurich_clean', type=str, default=DATA_LIST_PATH_ZURICH_CLEAN_IMG)
+parser.add_argument('--data_list_path_zurich_clean_lbl', type=str, default=DATA_LIST_PATH_ZURICH_CLEAN_LBL)
+
 parser.add_argument('--data_list_path_city_img', type=str, default=DATA_LIST_PATH_CITY_IMG)
 parser.add_argument('--data_list_path_city_lbl', type=str, default=DATA_LIST_PATH_CITY_LBL)
+
 parser.add_argument('--data_list_path_val_img', type=str, default=DATA_LIST_PATH_VAL_IMG)
 parser.add_argument('--data_list_path_val_lbl', type=str, default=DATA_LIST_PATH_VAL_LBL)
 
@@ -100,12 +101,11 @@ target_input_size = [540, 960]
 batch_size = 1
 
 max_epoch = 150
-num_steps = 60000
+num_steps = 45000
 #num_calmIoU = 15 # for debug
 num_calmIoU = 100
 
-# learning_rate_seg = 2.5e-4
-learning_rate_seg = 2.5e-5  # for finetune
+learning_rate_seg = 2.5e-4
 learning_rate_d = 1e-4
 learning_rate_rec = 1e-3
 learning_rate_dis = 1e-4
@@ -115,7 +115,6 @@ weight_decay = 0.0005
 lambda_seg = 0.1
 lambda_adv_target1 = 0.0002
 lambda_adv_target2 = 0.001
-
 source_channels = 3
 target_channels = 3
 private_code_size = 8
@@ -135,9 +134,15 @@ city_data_aug = Compose([RandomHorizontallyFlip(),
 # gta5_set   = GTA5Loader(args.gta5_data_path, args.data_list_path_gta5,args.data_list_path_city_fog_lbl, max_iters=num_steps* batch_size, crop_size=source_input_size, transform=gta5_data_aug, mean=IMG_MEAN,set='train')
 
 # foggyzurich medium 1498
-target_set = ZurichLoader(args.target_data_path, args.data_list_path_gta5, max_iters=num_steps * batch_size,
-                        crop_size=source_input_size, transform=city_data_aug, mean=IMG_MEAN, set='fz_clean')
-target_loader = torch_data.DataLoader(target_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+target2_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_fog, args.data_list_path_zurich_lbl,
+                        max_iters=num_steps * batch_size, crop_size=source_input_size, transform=city_data_aug,
+                        mean=IMG_MEAN, set='fz_medium')
+target2_loader = torch_data.DataLoader(target2_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+
+target1_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_clean, args.data_list_path_zurich_lbl,
+                      max_iters=num_steps * batch_size, crop_size=target_input_size, transform=city_data_aug,
+                      mean=IMG_MEAN, set='city_fz_clean')
+target1_loader = torch_data.DataLoader(target1_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
 city_set = CityLoader(args.city_data_path, args.data_list_path_city_img, args.data_list_path_city_lbl,
                       max_iters=num_steps * batch_size, crop_size=target_input_size, transform=city_data_aug,
@@ -149,7 +154,8 @@ val_set = CityLoader(args.target_data_path, args.data_list_path_val_img, args.da
 val_loader = torch_data.DataLoader(val_set, batch_size=1, shuffle=False, num_workers=4, pin_memory=True)
 
 sourceloader_iter = enumerate(source_loader)
-targetloader_iter = enumerate(target_loader)
+target1loader_iter = enumerate(target1_loader)
+target2loader_iter = enumerate(target2_loader)
 
 # Setup Metrics
 cty_running_metrics = runningScore(num_classes)
@@ -159,15 +165,6 @@ model_dict = {}
 # Setup Model
 print('building models ...')
 enc_shared = SharedEncoder().cuda()
-# freeze 5 layers
-
-# ct = 0
-# for child in enc_shared.children():
-#     ct += 1
-#     if ct < 6:
-#         for param in child.parameters():
-#             param.requires_grad = False
-
 dclf1 = DomainClassifier().cuda()
 dclf2 = DomainClassifier().cuda()
 enc_s = PrivateEncoder(64, private_code_size).cuda()
@@ -214,19 +211,14 @@ rec_opt_list.append(dec_t_opt)
 dis_opt_list.append(dis_s2t_opt)
 dis_opt_list.append(dis_t2s_opt)
 
-load_models(model_dict, load_model_path)
+# load_models(model_dict, './results/fz_clean/weight_22500')
 #enc_shared.load_state_dict(torch.load('./weight_gta2city/enc_shared.pth'))
-#load_models(model_dict, './weight_gta2city')   # model_dict is a dict of all network structure
+load_models(model_dict, load_model_path)   # model_dict is a dict of all network structure
 
-'''
 # reload params of enc_shared
-pretrained_dict = convert_state_dict(torch.load('./weight_gta2city/enc_shared.pth'))
-model_dict_enc = enc_shared.state_dict()
-pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict_enc}  # filter out unnecessary keys
-model_dict_enc.update(pretrained_dict)
-enc_shared.load_state_dict(model_dict_enc)    # already updated enc_shared network
-model_dict['enc_shared'] = enc_shared
-'''
+# enc_shared.load_state_dict(torch.load('./results/2clean2fz_medium_new_var/s2t1weight_best/enc_shared.pth'))
+# model_dict['enc_shared'] = enc_shared
+
 
 cudnn.enabled = True
 cudnn.benchmark = True
@@ -261,7 +253,6 @@ prob_dclf2_fake1_tmp = []
 prob_dclf2_fake2_tmp = []
 
 loss_sim_sg_tmp = []
-loss_sim_kl_tmp = []
 
 prob_dis_s2t_real1_tmp = []
 prob_dis_s2t_fake1_tmp = []
@@ -285,12 +276,8 @@ dis_t2s.train()
 best_iou = 0
 best_iter = 0
 
-sm = torch.nn.Softmax(dim=1)
-log_sm = torch.nn.LogSoftmax(dim=1)
-kl_loss = nn.KLDivLoss(size_average=False)
-
 for i_iter in range(num_steps):
-    #print(i_iter)
+    print(i_iter)
     sys.stdout.flush()
 
     enc_shared.train()
@@ -380,7 +367,7 @@ for i_iter in range(num_steps):
         dis_t2s_opt.zero_grad()
         loss_d_t2s.backward()
         dis_t2s_opt.step()
-    # freeze dclf and discriminator
+
     for p in dclf1.parameters():
         p.requires_grad = False
     for p in dclf2.parameters():
@@ -421,7 +408,7 @@ for i_iter in range(num_steps):
                             Variable(torch.FloatTensor(prob_dis_t2s_fake2.data.size()).fill_(true_label)).cuda())
     loss_image_translation = loss_gen_s2t + loss_gen_t2s
 
-    # ==== segmentation loss ====    
+    # ==== segmentation loss ====
     s_pred1 = upsample_256(s_pred1)
     s_pred2 = upsample_256(s_pred2)
     loss_s_sg1 = sg_loss(s_pred1, slabelv)
@@ -429,13 +416,6 @@ for i_iter in range(num_steps):
 
     loss_sim_sg = lambda_seg * loss_s_sg1 + loss_s_sg2
 
-    #mean_pred = t_pred1 * 0.5 + t_pred2
-    n, c, h, w = s_pred1.shape
-    loss_kl_s = (kl_loss(log_sm(s_pred1) , sm(s_pred2) ) ) / (n*h*w) + (kl_loss(log_sm(s_pred2) , sm(s_pred1)) ) / (n*h*w)
-    n, c, h, w = t_pred1.shape
-    loss_kl_t = (kl_loss(log_sm(t_pred1), sm(t_pred2))) / (n * h * w) + (kl_loss(log_sm(t_pred2), sm(t_pred1))) / ( n * h * w)
-    loss_kl = loss_kl_s #+ loss_kl_t
-    #print(loss_kl)
     # ==== tranalated segmentation====
     # When to start using translated labels, it should be discussed
     if i_iter >= 0:
@@ -475,12 +455,7 @@ for i_iter in range(num_steps):
         + 1.0 * loss_feat_similarity \
         + 0.5 * loss_rec_self \
         + 0.01 * loss_image_translation \
-        + 0.05 * loss_rec_tran\
-        + 1.0 * loss_kl
-
-    print(
-        '\033[1m iter = %8d/%8d \033[0m total loss = %.3f loss_seg = %.3f loss_kl = %.3f ' % (
-        i_iter, num_steps, total_loss, loss_sim_sg, loss_kl))
+        + 0.05 * loss_rec_tran
 
     enc_shared_opt.zero_grad()
     enc_s_opt.zero_grad()
@@ -575,14 +550,6 @@ for i_iter in range(num_steps):
         plt.savefig(os.path.join(args.log_dir, 'segmentation_loss.png'))
         plt.close()
 
-        plt.title('varianve_loss')
-        loss_sim_kl_tmp.append(loss_kl.item())
-        plt.plot(i_iter_tmp, loss_sim_kl_tmp, label='loss_kl_sg')
-        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, borderaxespad=0.)
-        plt.grid()
-        plt.savefig(os.path.join(args.log_dir, 'variance_loss.png'))
-        plt.close()
-
         plt.title('mIoU')
         plt.plot(epoch_tmp, City_tmp, label='City')
         plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, borderaxespad=0.)
@@ -622,9 +589,9 @@ for i_iter in range(num_steps):
                 images_val = Variable(images_val.cuda())
                 labels_val = Variable(labels_val)
 
-                _, aug_pred, pred, _ = enc_shared(images_val)  #
+                _, aug_pred , pred, _ = enc_shared(images_val)
                 #pred = upsample_512(pred)
-                pred = 0.5*aug_pred + pred
+                pred = 0.5 * aug_pred + pred
                 pred = upsample_540(pred)
                 pred = pred.data.max(1)[1].cpu().numpy()
                 gt = labels_val.data.cpu().numpy()
@@ -638,7 +605,7 @@ for i_iter in range(num_steps):
         cty_running_metrics.reset()
         City_tmp.append(cty_score['Mean IoU : \t'])
         epoch_tmp.append(i_iter)
-        if i_iter % 5000 == 0 and i_iter != 0:
+        if i_iter % 3000 == 0 and i_iter != 0:
             save_models(model_dict, save_model_path + 'weight_' + str(i_iter))
 
         if cty_score['Mean IoU : \t'] > best_iou:

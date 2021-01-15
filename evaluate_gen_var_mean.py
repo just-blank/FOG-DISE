@@ -42,12 +42,12 @@ torch.backends.cudnn.benchmark = True
 
 IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
 
-# DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data/'  # clean cityscapes images
-# DATA_LIST_PATH = './util/loader/cityscapes_list/train_syn.txt'  # 498 images from cityscapes
+DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data/'  # clean cityscapes images
+DATA_LIST_PATH = './util/loader/cityscapes_list/train_syn.txt'  # 498 images from cityscapes
 # SAVE_PATH = './generated_imgs/variance_pred_imgs/city_clean_36'
 
-DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # rename folder to train
-DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
+# DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # rename folder to train
+# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
 # DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'   # 40 test images from foggyzurich
 # DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_medium+test.txt'
 # SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean_40'
@@ -57,13 +57,13 @@ var_name = './log/var_mean/kl_t1'
 # WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1/weight_best'  # model path IoU 42
 # WEIGHT_DIR = './results/city2fz_clean_new/weight_best'
 # WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best' # model path IoU 39.16
-WEIGHT_DIR = './results/city2fz_clean_new_var/kl_lossweight_best' # model path IoU 39.16
+WEIGHT_DIR = './results/city2fz_clean_new_var/kl_loss_s/weight_45000' # model path IoU 39.16
 # WEIGHT_DIR = './results/fz_clean/weight_best'  # model path IoU 36
 # WEIGHT_DIR = './results/city2zurich_fog_var/weight_best'  # model path IoU 40.08
 
 # SET = 'fz_medium'    # for zurich fog
-SET = 'fz_clean'      # for zurich clean
-# SET = 'train'         # for city clean
+# SET = 'fz_clean'      # for zurich clean
+SET = 'train'         # for city clean
 
 IGNORE_LABEL = 255
 NUM_CLASSES = 19
@@ -216,7 +216,7 @@ def main():
         elif args.model == 'DeeplabVGG' or args.model == 'Oracle':
             output_batch = enc_shared(Variable(image).cuda())
             output_batch = interp(output_batch).cpu().data.numpy()
-    np.save(var_name,heatmap_score)
+    # np.save(var_name,heatmap_score)
     mean_score = np.mean(heatmap_score)
     print(mean_score)
     '''

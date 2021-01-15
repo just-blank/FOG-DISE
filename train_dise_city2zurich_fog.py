@@ -33,8 +33,8 @@ LOG_DIR = './log/city2zurich_fog_var/s2t2/'
 GEN_IMG_DIR = './generated_imgs/city2zurich_fog_var/s2t2/'
 save_model_path = './results/city2zurich_fog_var/s2t2/'
 
-# load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
-load_model_path = './results/city2zurich_fog_var/s2t2weight_best'
+load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
+# load_model_path = './results/city2zurich_fog_var/s2t2/weight_10000'
 
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'               # source data path
@@ -592,7 +592,7 @@ for i_iter in range(num_steps):
         cty_running_metrics.reset()
         City_tmp.append(cty_score['Mean IoU : \t'])
         epoch_tmp.append(i_iter)
-        if i_iter % 5000 == 0 and i_iter != 0:
+        if i_iter % 3000 == 0 and i_iter != 0:
             save_models(model_dict, save_model_path + 'weight_' + str(i_iter))
 
         if cty_score['Mean IoU : \t'] > best_iou:
