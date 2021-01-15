@@ -20,8 +20,7 @@ from torch.autograd import Variable
 from tqdm import tqdm
 
 from util.loader.CityLoader import CityLoader
-from util.loader.GTA5Loader import GTA5Loader
-from util.loader.ZurichLoader import ZurichLoader
+from util.loader.ZurichTrainLoader import ZurichTrainLoader
 from util.loader.augmentations import Compose, RandomHorizontallyFlip, RandomSized_and_Crop, RandomCrop
 from util.metrics import runningScore
 from util.loss import VGGLoss, VGGLoss_for_trans, cross_entropy2d
@@ -33,10 +32,11 @@ LOG_DIR = './log/three_in_one_var/'
 GEN_IMG_DIR = './generated_imgs/three_in_one_var/'
 save_model_path = './results/three_in_one_var/'
 
-load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'
-# load_model_path = './results/city2zurich_fog_var/s2t2/weight_10000'
+load_model_path = './results/2clean2fz_medium_new_var/s2t1/weight_best'         # 42.27
+load_model_path = './results/city2fz_clean_new_var/weight_best'                 # 39.16
+load_model_path = './results/city2zurich_fog_var/s2t2/weight_best'              # 43.17
 
-
+# for training
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'               # source data path
 
 CITY_FOG_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # target image path
@@ -45,7 +45,10 @@ DATA_LIST_PATH_CITY_IMG = './util/loader/cityscapes_list/train_syn.txt'         
 DATA_LIST_PATH_CITY_LBL = './util/loader/cityscapes_list/train_syn_label.txt'
 
 DATA_LIST_PATH_ZURICH_FOG_IMG = './util/loader/cityscapes_list/train_fz_medium+test.txt'      # 1498+40 zurich fog
+DATA_LIST_PATH_ZURICH_FOG_LBL = './util/loader/cityscapes_list/train_fz_medium+test.txt'
+
 DATA_LIST_PATH_ZURICH_CLEAN_IMG = './util/loader/cityscapes_list/train_fz_clean.txt'            # 248 zurich clean
+DATA_LIST_PATH_ZURICH_CLEAN_LBL = './util/loader/cityscapes_list/train_fz_clean.txt'
 
 # for validate
 DATA_LIST_PATH_VAL_IMG = './util/loader/cityscapes_list/fz_test.txt'            # 40 test zurich images
@@ -121,25 +124,18 @@ private_code_size = 8
 shared_code_channels = 2048
 
 # Setup Augmentations
-gta5_data_aug = Compose([RandomHorizontallyFlip(),
-                         RandomSized_and_Crop([256, 512])
-                         ])
-
 city_data_aug = Compose([RandomHorizontallyFlip(),
                          RandomCrop([256, 512])
                          ])
 # ==== DataLoader ====
-# target domain :
-# foggy cityscapes 0.03
-# gta5_set   = GTA5Loader(args.gta5_data_path, args.data_list_path_gta5,args.data_list_path_city_fog_lbl, max_iters=num_steps* batch_size, crop_size=source_input_size, transform=gta5_data_aug, mean=IMG_MEAN,set='train')
 
 # foggyzurich medium 1498
-target2_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_fog, args.data_list_path_zurich_lbl,
+target2_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_fog, args.data_list_path_zurich_fog_lbl,
                         max_iters=num_steps * batch_size, crop_size=source_input_size, transform=city_data_aug,
                         mean=IMG_MEAN, set='fz_medium')
 target2_loader = torch_data.DataLoader(target2_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
-target1_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_clean, args.data_list_path_zurich_lbl,
+target1_set = ZurichTrainLoader(args.target_data_path, args.data_list_path_zurich_clean, args.data_list_path_zurich_clean_lbl,
                       max_iters=num_steps * batch_size, crop_size=target_input_size, transform=city_data_aug,
                       mean=IMG_MEAN, set='city_fz_clean')
 target1_loader = torch_data.DataLoader(target1_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
@@ -165,12 +161,26 @@ model_dict = {}
 # Setup Model
 print('building models ...')
 enc_shared = SharedEncoder().cuda()
-dclf1 = DomainClassifier().cuda()
+
+dclf1= DomainClassifier().cuda()
 dclf2 = DomainClassifier().cuda()
-enc_s = PrivateEncoder(64, private_code_size).cuda()
-enc_t = PrivateEncoder(64, private_code_size).cuda()
-dec_s = PrivateDecoder(shared_code_channels, private_code_size).cuda()
-dec_t = dec_s
+dclf3 = DomainClassifier().cuda()
+
+enc_sty_s = PrivateEncoder(64, private_code_size).cuda()
+enc_sty_t1 = PrivateEncoder(64, private_code_size).cuda()
+dec_sty_s = PrivateDecoder(shared_code_channels, private_code_size).cuda()
+dec_sty_t1= dec_sty_s
+
+enc_fog_t1 = PrivateEncoder(64, private_code_size).cuda()
+enc_fog_t2 = PrivateEncoder(64, private_code_size).cuda()
+dec_fog_t1 = PrivateDecoder(shared_code_channels, private_code_size).cuda()
+dec_fog_t2 = dec_fog_t1
+
+enc_dual_s= PrivateEncoder(64, private_code_size).cuda()
+enc_dual_t2= PrivateEncoder(64, private_code_size).cuda()
+dec_dual_s = PrivateDecoder(shared_code_channels, private_code_size).cuda()
+dec_dual_t2 = dec_dual_s
+
 dis_s2t = Discriminator().cuda()
 dis_t2s = Discriminator().cuda()
 
@@ -288,7 +298,8 @@ for i_iter in range(num_steps):
 
     # ==== sample data ====
     idx_s, source_batch = next(sourceloader_iter)
-    idx_t, target_batch = next(targetloader_iter)
+    idx_t1, target1_batch = next(target1loader_iter)
+    idx_t2, target2_batch = next(target2loader_iter)
 
     source_data, source_label = source_batch
     target_data, target_label = target_batch

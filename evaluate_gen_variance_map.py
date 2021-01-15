@@ -47,20 +47,20 @@ IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32
 # SAVE_PATH = './generated_imgs/variance_pred_imgs/city_clean_36'
 
 DATA_DIRECTORY = '/home/mxz/Seg-Uncertainty/data/Cityscapes/real_fog_data'  # rename folder to train
-# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt' # 248 clean images from foggyzurich
-DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'   # 40 test images from foggyzurich
-# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_medium+test.txt'
-# SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean_40'
-SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_fog_42'
+DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_clean.txt'       # 248 clean images from foggyzurich
+# DATA_LIST_PATH = './util/loader/cityscapes_list/fz_test.txt'              # 40 test images from foggyzurich
+# DATA_LIST_PATH = './util/loader/cityscapes_list/train_fz_medium+test.txt'   # 1498+40 test images from foggyzurich
+# SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_fog_42'
+SAVE_PATH = './generated_imgs/variance_pred_imgs/zurich_clean_42'
 
-WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1/weight_best'  # model path IoU 42.27
-# WEIGHT_DIR = './results/city2fz_clean_new/weight_best'
-# WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best' # model path IoU 39.16
-# WEIGHT_DIR = './results/fz_clean/weight_best'  # model path IoU 36
-# WEIGHT_DIR = './results/city2zurich_fog_var/weight_best'  # model path IoU 40.08
+# WEIGHT_DIR = './results/city2fz_clean_new_var/weight_best'          # model path IoU 39.16          s -->t1
 
-SET = 'fz_medium'    # for zurich fog
-# SET = 'fz_clean'      # for zurich clean
+WEIGHT_DIR = './results/2clean2fz_medium_new_var/s2t1/weight_best'  # model path IoU 42.49          t1-->t2
+
+# WEIGHT_DIR = './results/city2zurich_fog_var/s2t2/weight_best'       # model path IoU 43.17          s -->t2
+
+# SET = 'fz_medium'    # for zurich fog
+SET = 'fz_clean'      # for zurich clean
 # SET = 'train'         # for city clean
 
 IGNORE_LABEL = 255
@@ -240,15 +240,16 @@ def main():
                 os.mkdir(save_path)
             output.save('%s/%s' % (save_path, name_tmp))
             print('%s/%s' % (save_path, name_tmp))
+            '''
             output_col.save('%s/%s_color.png' % (save_path, name_tmp.split('.png')[0]))
-
+            
             heatmap_tmp = heatmap_batch[i, :, :] / np.max(heatmap_batch[i, :, :])   # max normalization
             fig = plt.figure()
             plt.axis('off')
             heatmap = plt.imshow(heatmap_tmp, cmap='viridis')
             # fig.colorbar(heatmap)
             fig.savefig('%s/%s_var_map.png' % (save_path, name_tmp.split('.png')[0]))
-
+            '''
     return args.save
 
 

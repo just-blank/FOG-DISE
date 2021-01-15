@@ -34,7 +34,7 @@ GEN_IMG_DIR = './generated_imgs/city2fz_clean_new_var/kl_loss_s/'
 save_model_path = './results/city2fz_clean_new_var/kl_loss_s/'
 
 # load_model_path = './results/city2fz_clean_new_var/kl_lossweight_best'
-load_model_path = './results/city2fz_clean_new_var/weight_best'
+load_model_path = './results/city2fz_clean_new_var/weight_best'                 # 39.16
 
 CITY_DATA_PATH = '/home/mxz/Seg-Uncertainty/data/Cityscapes/data'
 
